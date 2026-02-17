@@ -1,9 +1,6 @@
 from dash import Dash, html, dcc, Input, Output  # pip install dash
 import dash_bootstrap_components as dbc   # pip install dash-bootstrap-components
 import pandas as pd     # pip install pandas
-import matplotlib      # pip install matplotlib
-import dash_ag_grid as dag
-matplotlib.use('agg')
 import show_data_plotly
 
 df = pd.read_csv("shots.csv")
