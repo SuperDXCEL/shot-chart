@@ -79,7 +79,10 @@ def plot_data(player, team, lower, upper):
     Input("team_category", 'value')
 )
 def select_players(team):
-    return df[df["team"] == team]["player_number"].unique()
+    player_list = df[df["team"] == team]["player_number"].unique()
+    int_list = [int(x) for x in player_list]
+    int_list.sort()
+    return int_list
 
 if __name__ == '__main__':
     app.run(debug=False, port=8002)
