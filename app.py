@@ -34,7 +34,7 @@ app.layout = dbc.Container([
                 id='lower_bound',
                 value="index",
                 clearable=False,
-                options=list(range(MIN, MAX)),
+                options=list(range(MIN, MAX+1)),
                 placeholder="SELECT FIRST GAME")
         ], width=2),
         dbc.Col([
@@ -42,7 +42,7 @@ app.layout = dbc.Container([
                 id='upper_bound',
                 value="index",
                 clearable=False,
-                options=list(range(MIN, MAX)),
+                options=list(range(MIN, MAX+1)),
                 placeholder="SELECT LAST GAME")
         ], width=2)
     ]),
