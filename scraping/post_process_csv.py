@@ -24,7 +24,7 @@ def modify_dataframe():
     df["left"] = df.apply(lambda x: flip_shot(x["left"], x["top"], "left"), axis=1)
     df["top"] = df.apply(lambda x: flip_shot(x["left"], x["top"], "top"), axis=1)
     df["game_index"] = df["game_index"].astype(int)
-    df.to_csv("shots.csv", index=False)
+    df.to_csv("../shots.csv", index=False)
 
 if __name__ == "__main__":
     modify_dataframe()
