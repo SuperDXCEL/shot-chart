@@ -141,6 +141,7 @@ def draw_hotzone_spots(fig, corner=None, wing=None, center=None, paint=None):
         "paint_outside": (4, 7.5),
         "center": [(6.5, 7.5), (10, 7.5)]
     }
+
     # Corner threes
     fig.add_shape(type="line", x0=2.99, x1=2.99, y0=0, y1=5.05)
     fig.add_shape(type="line", x0=2.99, x1=2.99, y0=9.95, y1=15)
@@ -153,7 +154,8 @@ def draw_hotzone_spots(fig, corner=None, wing=None, center=None, paint=None):
     for key in list(corner.keys()):
         makes = corner[key]["make"]
         misses = corner[key]["miss"]
-        total_shots = makes + misses
+        corner[key]["total_shots"] = makes + misses
+        total_shots = corner[key]["total_shots"]
         percentage = 0
         if total_shots > 0:
             percentage = (makes / total_shots) * 100
@@ -165,8 +167,10 @@ def draw_hotzone_spots(fig, corner=None, wing=None, center=None, paint=None):
     misses = paint["makes"]
     restr_makes = paint["restricted_area_makes"]
     restr_misses = paint["restricted_area_misses"]
-    total_shots = makes + misses
-    total_restr_shots = restr_makes + restr_misses
+    paint["total_shots"] = makes + misses
+    total_shots = paint["total_shots"]
+    paint["total_restr_shots"] = restr_makes + restr_misses
+    total_restr_shots = paint["total_restr_shots"] 
     percentage = 0
     restr_percentage = 0
     if total_shots > 0:
@@ -197,25 +201,37 @@ def draw_hotzone_spots(fig, corner=None, wing=None, center=None, paint=None):
         fig.add_annotation(x=text_positions[key][1][0], y=text_positions[key][1][1], text=str(int(tw_percentage)) + "%", showarrow=False)
         fig.add_annotation(x=text_positions[key][1][0], y=text_positions[key][1][1]-0.4, text=f"{tw_makes} / {total_2_shots}", showarrow=False)
     
-    for key in list(center.keys()):
-        print(key)
-        th_makes = center[key]["3_make"]
-        th_misses = center[key]["3_miss"]
-        tw_makes = center[key]["2_make"]
-        tw_misses = center[key]["2_miss"]
-        total_3_shots = th_makes + th_misses
-        total_2_shots = tw_makes + tw_misses
-        th_percentage = 0
-        tw_percentage = 0
-        if total_3_shots > 0:
-            th_percentage = (th_makes / (th_makes + th_misses)) * 100
-        if total_2_shots > 0:
-            tw_percentage = (tw_makes / (tw_makes + tw_misses)) * 100
-        fig.add_annotation(x=text_positions[key][0][0], y=text_positions[key][0][1], text=str(int(th_percentage)) + "%", showarrow=False)
-        fig.add_annotation(x=text_positions[key][0][0], y=text_positions[key][0][1]-0.4, text=f"{th_makes} / {total_3_shots}", showarrow=False)
-        fig.add_annotation(x=text_positions[key][1][0], y=text_positions[key][1][1], text=str(int(tw_percentage)) + "%", showarrow=False)
-        fig.add_annotation(x=text_positions[key][1][0], y=text_positions[key][1][1]-0.4, text=f"{tw_makes} / {total_2_shots}", showarrow=False)
+    th_makes = center["3_make"]
+    th_misses = center["3_miss"]
+    tw_makes = center["2_make"]
+    tw_misses = center["2_miss"]
+    total_3_shots = th_makes + th_misses
+    total_2_shots = tw_makes + tw_misses
+    th_percentage = 0
+    tw_percentage = 0
+    if total_3_shots > 0:
+        th_percentage = (th_makes / (th_makes + th_misses)) * 100
+    if total_2_shots > 0:
+        tw_percentage = (tw_makes / (tw_makes + tw_misses)) * 100
+    fig.add_annotation(x=text_positions["center"][0][0], y=text_positions["center"][0][1], text=str(int(th_percentage)) + "%", showarrow=False)
+    fig.add_annotation(x=text_positions["center"][0][0], y=text_positions["center"][0][1]-0.4, text=f"{th_makes} / {total_3_shots}", showarrow=False)
+    fig.add_annotation(x=text_positions["center"][1][0], y=text_positions["center"][1][1], text=str(int(tw_percentage)) + "%", showarrow=False)
+    fig.add_annotation(x=text_positions["center"][1][0], y=text_positions["center"][1][1]-0.4, text=f"{tw_makes} / {total_2_shots}", showarrow=False)
 
+def draw_shot_distribution_piechart(corner, wing, center, paint):
+    """
+        Shot distribution percentages, has to be called after draw_hotzone_spots because of paint["total_shots"]
+        and paint["total_restr_shots"]
+    """
+    shot_distribution_percentages = {}
+    if corner and wing and center and paint:
+        shot_distribution_percentages = {
+            "total_3s": corner["c3_right"]["make"] + corner["c3_right"]["miss"] + corner["c3_left"]["make"] + corner["c3_left"]["miss"] + wing["w_left"]["3_make"] + wing["w_left"]["3_miss"] + wing["w_right"]["3_make"] + wing["w_right"]["3_miss"] + center["3_make"] + center["3_miss"],
+            "total_2s": corner["c2_right"]["make"] + corner["c2_right"]["miss"] + corner["c2_left"]["make"] + corner["c2_left"]["miss"] + wing["w_left"]["2_make"] + wing["w_left"]["2_miss"] + wing["w_right"]["2_make"] + wing["w_right"]["2_miss"] + center["2_make"] + center["2_miss"],
+            "total_floaters": paint["total_shots"],
+            "total_layups": paint["total_restr_shots"] 
+    }
+    
 def shot_in_area(shot):
     """
         Helper function for grouping wing and center shots
@@ -356,37 +372,30 @@ def find_wing_percentage(shot_array):
 
 def find_center_percentage(shot_array):
     data = {
-        "center": {
-            "x_range": [5.8, 14],
-            "y_range": [5.05, 9.95],
-            "3_make": 0,
-            "2_make": 0,
-            "3_miss": 0,
-            "2_miss": 0,
-            "color": "gray"
-        }
+        "x_range": [5.8, 14],
+        "y_range": [5.05, 9.95],
+        "3_make": 0,
+        "2_make": 0,
+        "3_miss": 0,
+        "2_miss": 0,
+        "color": "gray"
     } 
-    keys = list(data.keys())
-    for key in keys:
-        for i in range(len(shot_array)):
-            shot = shot_array[i]
-            x_range = data[key]["x_range"]
-            y_range = data[key]["y_range"]
-            if shot[0] >= x_range[0] and shot[0] <= x_range[1] and shot[1] >= y_range[0] and shot[1] <= y_range[1]:
-                if shot[2]:
-                    if distance(shot) >= 6.75:
-                        data[key]["3_make"] += 1
-                    else:
-                        data[key]["2_make"] += 1
+    for i in range(len(shot_array)):
+        shot = shot_array[i]
+        x_range = data["x_range"]
+        y_range = data["y_range"]
+        if shot[0] >= x_range[0] and shot[0] <= x_range[1] and shot[1] >= y_range[0] and shot[1] <= y_range[1]:
+            if shot[2]:
+                if distance(shot) >= 6.75:
+                    data["3_make"] += 1
                 else:
-                    if distance(shot) >= 6.75:
-                        data[key]["3_miss"] += 1
-                    else:
-                        data[key]["2_miss"] += 1
-    for key in list(data.keys()):
-        for subkey in list(data[key].keys()):
-            print(key, subkey, data[key][subkey])
-    return data
+                    data["2_make"] += 1
+            else:
+                if distance(shot) >= 6.75:
+                    data["3_miss"] += 1
+                else:
+                    data["2_miss"] += 1
+    return data 
 
 def distance(shot):
     """
