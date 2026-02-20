@@ -1,3 +1,7 @@
+"""
+    Need to add total shot attempts and makes, alongside percentage
+"""
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -22,11 +26,11 @@ def draw_court(player_number, team, lower_bound, upper_bound):
     # Court measurements
     court_width = 14 # Half-court
     court_height = 15
-    corner_three_left = {"x": 0, "y": 0.9} # Extends for flat_for meters
-    corner_three_right = {"x": 0, "y": (court_height - 0.9)} # Extends for flat_for meters
-    flat_for = 1.575
+    corner_three_left = {"x": 0, "y": 0.9} # Extends for 2.99 meters
+    corner_three_right = {"x": 0, "y": (court_height - 0.9)} # Extends for 2.99 meters
+    rim_from_baseline = 1.575
     three_point_arc_radius = 6.75
-    center_for_arc = (flat_for, 7.5) # Draw arc from here for 6.75 - 1.575
+    center_for_arc = (rim_from_baseline, 7.5) # Draw arc from here for 6.75 - 1.575
 
     # Plot player's shot
     player_shot_df = get_specific_player_shots(player_number=player_number, team=team, lower_bound=lower_bound, upper_bound=upper_bound)
@@ -47,10 +51,12 @@ def draw_court(player_number, team, lower_bound, upper_bound):
     corner = find_corner_percentage(np_shot_array)
     wing = find_wing_percentage(np_shot_array)
     center = find_center_percentage(np_shot_array)
-    draw_hotzone_spots(fig, corner, wing, center)
+    paint = find_paint_percentage(np_shot_array)
     print("CORNER DICT: ", corner)
     print("WING DICT: ", wing)
     print("CENTER DICT: ", center)  
+    print("PAINT DICT: ", paint)
+    draw_hotzone_spots(fig, corner, wing, center, paint)
 
     # Plot court
     # ax.set_facecolor("white")
@@ -75,13 +81,13 @@ def draw_court(player_number, team, lower_bound, upper_bound):
     draw_arc_between_two_points((1.25, 9), (1.25, 6), center_for_arc, fig, 1.25)
     
     fig.update_xaxes(
-        range=[0, 14],
+        range=[0, 15],
         autorange=False,
         visible=True
     )
 
     fig.update_yaxes(
-        range=[0, 15],
+        range=[0, 16],
         autorange=False,
         scaleanchor="x",
         scaleratio=1,
@@ -120,31 +126,27 @@ def draw_arc_between_two_points(point, point_two, center, fig, radius):
         showlegend=False
     ))
 
-def draw_hotzone_spots(fig, corner=None, wing=None, center=None):
+def draw_hotzone_spots(fig, corner=None, wing=None, center=None, paint=None):
     """
         Draw hotzones, 5 spots for threes, 5 spots for midrange, 1 spot for restricted area(layups) and one spot for midrange/floaters in the paint
     """
     text_positions = {
-        "c3_right": (1, 14.5),
-        "c3_left": (1, 0.25),
+        "c3_right": (1, 14.75),
+        "c3_left": (1, 0.65),
         "c2_left": (1, 2.5),
         "c2_right": (1, 12),
         "w_left": [(8, 3), (4, 3)],
         "w_right": [(8, 12), (4, 12)],
-        "paint_near": (1, 7.5),
+        "paint_near": (1.75, 7.5),
         "paint_outside": (4, 7.5),
         "center": [(6.5, 7.5), (10, 7.5)]
     }
     # Corner threes
-    #ax.vlines(2.99, 0, 5.05, 'black')
     fig.add_shape(type="line", x0=2.99, x1=2.99, y0=0, y1=5.05)
-    #ax.vlines(2.99, 9.85, 15, 'black')
     fig.add_shape(type="line", x0=2.99, x1=2.99, y0=9.95, y1=15)
     
     # 45 and middle separation
-    #ax.plot([5.8, 14], [5.05, 5.05], 'black')
     fig.add_shape(type="line", x0=5.8, x1=14, y0=5.05, y1=5.05)
-    #ax.plot([5.8, 14], [9.95, 9.95], 'black')
     fig.add_shape(type="line", x0=5.8, x1=14, y0=9.95, y1=9.95)
     
     # Add percentages
@@ -154,9 +156,28 @@ def draw_hotzone_spots(fig, corner=None, wing=None, center=None):
         total_shots = makes + misses
         percentage = 0
         if total_shots > 0:
-            percentage = (makes / (makes + misses)) * 100
-        #ax.text(text_positions[key][0], text_positions[key][1], str(int(percentage)) + "%", {'color': 'black'})
-        fig.add_annotation(x=text_positions[key][0], y=text_positions[key][1], text=str(int(percentage)) + "%")
+            percentage = (makes / total_shots) * 100
+        fig.add_annotation(x=text_positions[key][0], y=text_positions[key][1], text=str(int(percentage)) + "%", showarrow=False)
+        fig.add_annotation(x=text_positions[key][0], y=text_positions[key][1] - 0.4, text=f"{makes} / {total_shots}", showarrow=False)
+    
+    # Paint
+    makes = paint["makes"]
+    misses = paint["makes"]
+    restr_makes = paint["restricted_area_makes"]
+    restr_misses = paint["restricted_area_misses"]
+    total_shots = makes + misses
+    total_restr_shots = restr_makes + restr_misses
+    percentage = 0
+    restr_percentage = 0
+    if total_shots > 0:
+        percentage = (makes / total_shots) * 100
+    if total_restr_shots > 0:
+        restr_percentage = (restr_makes / total_restr_shots) * 100
+    fig.add_annotation(x=text_positions["paint_outside"][0], y=text_positions["paint_outside"][1], text=str(int(percentage)) + "%", showarrow=False)
+    fig.add_annotation(x=text_positions["paint_near"][0], y=text_positions["paint_near"][1], text=str(int(restr_percentage)) + "%", showarrow=False)
+    fig.add_annotation(x=text_positions["paint_outside"][0], y=text_positions["paint_outside"][1] - 0.4, text=f"{makes} / {total_shots}", showarrow=False)
+    fig.add_annotation(x=text_positions["paint_near"][0], y=text_positions["paint_near"][1] - 0.4, text=f"{restr_makes} / {total_restr_shots}", showarrow=False)
+
     for key in list(wing.keys()):
         print(key)
         th_makes = wing[key]["3_make"]
@@ -171,10 +192,10 @@ def draw_hotzone_spots(fig, corner=None, wing=None, center=None):
             th_percentage = (th_makes / (th_makes + th_misses)) * 100
         if total_2_shots > 0:
             tw_percentage = (tw_makes / (tw_makes + tw_misses)) * 100
-        #ax.text(text_positions[key][0][0], text_positions[key][0][1], str(int(th_percentage)) + "%", {'color': 'black'})
         fig.add_annotation(x=text_positions[key][0][0], y=text_positions[key][0][1], text=str(int(th_percentage)) + "%", showarrow=False)
-        #ax.text(text_positions[key][1][0], text_positions[key][1][1], str(int(tw_percentage)) + "%", {'color': 'black'})
+        fig.add_annotation(x=text_positions[key][0][0], y=text_positions[key][0][1]-0.4, text=f"{th_makes} / {total_3_shots}", showarrow=False)
         fig.add_annotation(x=text_positions[key][1][0], y=text_positions[key][1][1], text=str(int(tw_percentage)) + "%", showarrow=False)
+        fig.add_annotation(x=text_positions[key][1][0], y=text_positions[key][1][1]-0.4, text=f"{tw_makes} / {total_2_shots}", showarrow=False)
     
     for key in list(center.keys()):
         print(key)
@@ -190,19 +211,10 @@ def draw_hotzone_spots(fig, corner=None, wing=None, center=None):
             th_percentage = (th_makes / (th_makes + th_misses)) * 100
         if total_2_shots > 0:
             tw_percentage = (tw_makes / (tw_makes + tw_misses)) * 100
-        #ax.text(text_positions[key][0][0], text_positions[key][0][1], str(int(th_percentage)) + "%", {'color': 'black'})
-        fig.add_annotation(x=text_positions[key][0][0], y=text_positions[key][0][1], text=str(int(th_percentage)) + "%")
-        #ax.text(text_positions[key][1][0], text_positions[key][1][1], str(int(tw_percentage)) + "%", {'color': 'black'})
-        fig.add_annotation(x=text_positions[key][1][0], y=text_positions[key][1][1], text=str(int(tw_percentage)) + "%")
-
-#    # Corner fill between
-#    ax.fill_between(np.arange(0, 2.99, 0.01), 14.1, 15)
-#    ax.fill_between(np.arange(0, 2.99, 0.01), 0, 0.9)
-#    # Corner midrange fill between
-#    ax.fill_between(np.arange(0, 2.99, 0.01), 9.95, 14.1)
-#    ax.fill_between(np.arange(0, 2.99, 0.01), 0.9, 5.05)
-#    # Paint
-#    ax.fill_between(np.arange(0, 5.8, 0.01), 5.05, 9.95)
+        fig.add_annotation(x=text_positions[key][0][0], y=text_positions[key][0][1], text=str(int(th_percentage)) + "%", showarrow=False)
+        fig.add_annotation(x=text_positions[key][0][0], y=text_positions[key][0][1]-0.4, text=f"{th_makes} / {total_3_shots}", showarrow=False)
+        fig.add_annotation(x=text_positions[key][1][0], y=text_positions[key][1][1], text=str(int(tw_percentage)) + "%", showarrow=False)
+        fig.add_annotation(x=text_positions[key][1][0], y=text_positions[key][1][1]-0.4, text=f"{tw_makes} / {total_2_shots}", showarrow=False)
 
 def shot_in_area(shot):
     """
@@ -242,20 +254,6 @@ def find_corner_percentage(shot_array):
             "miss": 0,
             "color": "gray"
         },
-        "paint_near": {
-            "x_range": [0, 2.99],
-            "y_range": [5.05, 9.95],
-            "make": 0,
-            "miss": 0,
-            "color": "gray"
-        },
-        "paint_outside": {
-            "x_range": [1.25, 5.8],
-            "y_range": [5.05, 9.95],
-            "make": 0,
-            "miss": 0,
-            "color": "gray"
-        }
     }
     keys = list(data.keys())
     # If any shot has x and y coordinates in the zones range, we count the makes and the misses
@@ -276,6 +274,38 @@ def find_corner_percentage(shot_array):
         if (data[key]["miss"] + data[key]["make"]) > 0:
             print(key, data[key]["make"] / (data[key]["miss"] + data[key]["make"]))
     return data
+
+def find_paint_percentage(shot_array):
+    """
+        Needs refactor down the line, merge center, wing and paint percentage
+        calculation functions if possible as they all share the same dictionary
+        keys and all have a distance float to calculate
+    """
+    paint = {
+        "x_range": [0, 5.8],
+        "y_range": [5.05, 9.95],
+        "restricted_area_makes": 0,
+        "restricted_area_misses": 0,
+        "makes": 0,
+        "misses": 0,
+        "color": "gray"
+    }
+    for i in range(len(shot_array)):
+        shot = shot_array[i]
+        x_range = paint["x_range"]
+        y_range = paint["y_range"]
+        if shot[0] < x_range[1] and shot[0] > x_range[0] and shot[1] < y_range[1] and shot[1] > y_range[0]:
+            if distance(shot) <= 1.25:
+                if shot[2]:
+                   paint["restricted_area_makes"] += 1
+                else:
+                   paint["restricted_area_misses"] += 1
+            else:
+                if shot[2]:
+                   paint["makes"] += 1
+                else:
+                   paint["misses"] += 1
+    return paint
         
 def find_wing_percentage(shot_array):
     """
