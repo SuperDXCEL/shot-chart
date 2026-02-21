@@ -58,6 +58,7 @@ def draw_court(player_number, team, lower_bound, upper_bound):
     print("PAINT DICT: ", paint)
     draw_hotzone_spots(fig, corner, wing, center, paint)
 
+
     # Plot court
     # ax.set_facecolor("white")
     draw_arc_between_two_points((2.99, corner_three_right["y"]), (2.99, corner_three_left["y"]), center_for_arc, fig, three_point_arc_radius)
@@ -218,20 +219,44 @@ def draw_hotzone_spots(fig, corner=None, wing=None, center=None, paint=None):
     fig.add_annotation(x=text_positions["center"][1][0], y=text_positions["center"][1][1], text=str(int(tw_percentage)) + "%", showarrow=False)
     fig.add_annotation(x=text_positions["center"][1][0], y=text_positions["center"][1][1]-0.4, text=f"{tw_makes} / {total_2_shots}", showarrow=False)
 
-def draw_shot_distribution_piechart(corner, wing, center, paint):
+    return corner, wing, center, paint
+
+def draw_shot_distribution_pie_chart(player, team, lower, upper):
     """
         Shot distribution percentages, has to be called after draw_hotzone_spots because of paint["total_shots"]
         and paint["total_restr_shots"]
     """
+    player_shot_df = get_specific_player_shots(player_number=player, team=team, lower_bound=lower, upper_bound=upper)
+    x_factor = 50 / 14
+    y_factor = 100 / 15
+    player_shot_df["left"] = player_shot_df['left'] / x_factor
+    player_shot_df["top"] = player_shot_df['top'] / y_factor
+    fig = px.scatter(player_shot_df, x="left", y="top")
+    if fig:
+        print("NOT HERE BUDDY", fig)
+    np_shot_array = player_shot_df[["left", "top", "success"]].values
+
+    corner = find_corner_percentage(np_shot_array)
+    wing = find_wing_percentage(np_shot_array)
+    center = find_center_percentage(np_shot_array)
+    paint = find_paint_percentage(np_shot_array)
+    corner, wing, center, paint = draw_hotzone_spots(fig, corner, wing, center, paint)
     shot_distribution_percentages = {}
     if corner and wing and center and paint:
         shot_distribution_percentages = {
-            "total_3s": corner["c3_right"]["make"] + corner["c3_right"]["miss"] + corner["c3_left"]["make"] + corner["c3_left"]["miss"] + wing["w_left"]["3_make"] + wing["w_left"]["3_miss"] + wing["w_right"]["3_make"] + wing["w_right"]["3_miss"] + center["3_make"] + center["3_miss"],
-            "total_2s": corner["c2_right"]["make"] + corner["c2_right"]["miss"] + corner["c2_left"]["make"] + corner["c2_left"]["miss"] + wing["w_left"]["2_make"] + wing["w_left"]["2_miss"] + wing["w_right"]["2_make"] + wing["w_right"]["2_miss"] + center["2_make"] + center["2_miss"],
-            "total_floaters": paint["total_shots"],
-            "total_layups": paint["total_restr_shots"] 
+            "threes": corner["c3_right"]["make"] + corner["c3_right"]["miss"] + corner["c3_left"]["make"] + corner["c3_left"]["miss"] + wing["w_left"]["3_make"] + wing["w_left"]["3_miss"] + wing["w_right"]["3_make"] + wing["w_right"]["3_miss"] + center["3_make"] + center["3_miss"],
+            "midrange": corner["c2_right"]["make"] + corner["c2_right"]["miss"] + corner["c2_left"]["make"] + corner["c2_left"]["miss"] + wing["w_left"]["2_make"] + wing["w_left"]["2_miss"] + wing["w_right"]["2_make"] + wing["w_right"]["2_miss"] + center["2_make"] + center["2_miss"],
+            "floaters/close_midrange": paint["total_shots"],
+            "layups": paint["total_restr_shots"] 
     }
-    
+    labels = list(shot_distribution_percentages.keys())
+    values = list(shot_distribution_percentages.values())
+
+    fig = go.Figure(data=[go.Pie(labels=labels, values=values)])
+
+    fig.update_layout(title="Shot Distribution")
+    return fig
+
 def shot_in_area(shot):
     """
         Helper function for grouping wing and center shots
@@ -405,3 +430,8 @@ def distance(shot):
     distance = math.sqrt((shot[0] - hoop_location[0])**2 + (shot[1] - hoop_location[1])**2)
     print("DISTANCE: ", distance)
     return distance
+
+t = "EL VENTERO CBV"
+p = 0
+l = 1
+u = 18

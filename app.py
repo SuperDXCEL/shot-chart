@@ -12,7 +12,6 @@ MAX = df["game_index"].max()
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container([
     html.H1("SHOT CHART TERCERA FEB GRUPO B-A 2025-26", style={'textAlign':'center', "color": "white", "fontFamily": "Helvetica", "fontWeight": "bold"}),
-
     dbc.Row([
         dbc.Col([
             dcc.Dropdown(
@@ -46,10 +45,14 @@ app.layout = dbc.Container([
                 placeholder="SELECT LAST GAME")
         ], width=2)
     ]),
-
     dbc.Row([
         dbc.Col([
             dcc.Graph(id='graph', figure={}, style={"height": "85vh", "width": "90vw"})
+        ], width=20, md=6),
+    ], className='mt-4'),
+    dbc.Row([
+        dbc.Col([
+            dcc.Graph(id='shot_distribution_pie_chart', figure={}, style={"height": "85vh", "width": "90vw"})
         ], width=20, md=6),
     ], className='mt-4'),
     ],
@@ -68,11 +71,20 @@ app.layout = dbc.Container([
     Input('upper_bound', 'value')
 )
 def plot_data(player, team, lower, upper):
-
-    # Build the Plotly figure
     fig = show_data_plotly.draw_court(player, team, lower, upper)
     return fig
 
+@app.callback(
+    Output('shot_distribution_pie_chart', 'figure'),
+    Input('player_category', 'value'),
+    Input('team_category', 'value'),
+    Input('lower_bound', 'value'),
+    Input('upper_bound', 'value')
+)
+def show_pie_chart(player, team, lower, upper):
+    fig = show_data_plotly.draw_shot_distribution_pie_chart(player, team, lower, upper)
+    return fig
+    
 # Select players available from team
 @app.callback(
     Output("player_category", 'options'),
