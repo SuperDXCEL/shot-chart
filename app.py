@@ -3,7 +3,7 @@ import dash_bootstrap_components as dbc   # pip install dash-bootstrap-component
 import pandas as pd     # pip install pandas
 import show_data_plotly
 
-df = pd.read_csv("shots.csv")
+df = pd.read_csv("scraping/shots.csv")
 
 TEAM_VALUES = df['team'].unique()
 MIN = df["game_index"].min()

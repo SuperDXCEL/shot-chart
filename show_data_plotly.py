@@ -12,7 +12,7 @@ def get_specific_player_shots(player_number, team, lower_bound, upper_bound):
     """
         Return dataframe with specific player shots
     """
-    df = pd.read_csv("shots.csv")
+    df = pd.read_csv("scraping/shots.csv")
     df = df[df['player_number'] == player_number]
     df = df[df['team'] == team]
     df = df[(df['game_index'] >= lower_bound) & (df['game_index'] <= upper_bound)]

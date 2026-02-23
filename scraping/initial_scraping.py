@@ -7,9 +7,12 @@ import undetected_chromedriver as uc
 import time
 import pandas as pd
 
+MISSED_GAMES = 0
+
 class FEBBot():
     def __init__(self):
         options = uc.ChromeOptions()
+        #options.add_argument('--headless')
         #options.add_argument('--user-data-dir="/home/nodev/snap/chromium/common/chromium/Default"')
         #options.add_argument('--profile-directory=Profile 1')
         self.driver = uc.Chrome(
@@ -122,6 +125,8 @@ class FEBBot():
             return dataframe
         except Exception as e:
             print("EXCEPTION AT GET_DATA_FROM_GAME:", e)
+            global MISSED_GAMES
+            MISSED_GAMES += 1
             return pd.DataFrame({})
 
     def get_to_graphical_chart(self):
@@ -166,9 +171,9 @@ class FEBBot():
 
     def run(self):
         #lower_bound, upper_bound = self.get_jornada_range()
-        i = 18 
+        i = 0
         full_df = pd.DataFrame({})
-        while i < 19:
+        while i < 20:
             self.click_game_index(i)
             df = self.get_games(i)
             full_df = pd.concat([full_df, df])
@@ -181,7 +186,9 @@ class FEBBot():
             print("Length of rows after concatenating (with possible duplicates): ", len(full_df))
             full_df.drop_duplicates()
             print("Length of rows after concatenating: ", len(full_df))
+            global MISSED_GAMES
             full_df.to_csv("shots.csv")
+            print("MISSED GAMES: ", MISSED_GAMES)
         except Exception as e:
             print("Could not open shots.csv as a dataframe", e)
             full_df.to_csv("shots.csv", index=False)
