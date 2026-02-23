@@ -12,7 +12,7 @@ MISSED_GAMES = 0
 class FEBBot():
     def __init__(self):
         options = uc.ChromeOptions()
-        #options.add_argument('--headless')
+        options.add_argument('--headless')
         #options.add_argument('--user-data-dir="/home/nodev/snap/chromium/common/chromium/Default"')
         #options.add_argument('--profile-directory=Profile 1')
         self.driver = uc.Chrome(
