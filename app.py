@@ -2,6 +2,7 @@ from dash import Dash, html, dcc, Input, Output  # pip install dash
 import dash_bootstrap_components as dbc   # pip install dash-bootstrap-components
 import pandas as pd     # pip install pandas
 import show_data_plotly
+import utilities
 
 df = pd.read_csv("scraping/shots.csv")
 
@@ -74,7 +75,9 @@ app.layout = dbc.Container([
     Input('upper_bound', 'value')
 )
 def plot_data(player, team, lower, upper):
-    fig = show_data_plotly.draw_court(player, team, lower, upper)
+    player_number = utilities.get_player_number_from_name(player, team, df)
+    print("CURRENT PLAYER NUMBER: ", player_number)
+    fig = show_data_plotly.draw_court(player_number, team, lower, upper)
     return fig
 
 @app.callback(
@@ -85,7 +88,9 @@ def plot_data(player, team, lower, upper):
     Input('upper_bound', 'value')
 )
 def show_shot_distribution_pie_chart(player, team, lower, upper):
-    fig = show_data_plotly.draw_shot_distribution_pie_chart(player, team, lower, upper)
+    player_number = utilities.get_player_number_from_name(player, team, df)
+    print("CURRENT PLAYER NUMBER: ", player_number)
+    fig = show_data_plotly.draw_shot_distribution_pie_chart(player_number, team, lower, upper)
     return fig
     
 @app.callback(
@@ -96,7 +101,9 @@ def show_shot_distribution_pie_chart(player, team, lower, upper):
     Input('upper_bound', 'value')
 )
 def show_points_per_position_pie_chart(player, team, lower, upper):
-    fig = show_data_plotly.draw_points_per_position_pie_chart(player, team, lower, upper)
+    player_number = utilities.get_player_number_from_name(player, team, df)
+    print("CURRENT PLAYER NUMBER: ", player_number)
+    fig = show_data_plotly.draw_points_per_position_pie_chart(player_number, team, lower, upper)
     return fig
 
 # Select players available from team
@@ -105,10 +112,12 @@ def show_points_per_position_pie_chart(player, team, lower, upper):
     Input("team_category", 'value')
 )
 def select_players(team):
-    player_list = df[df["team"] == team]["player_number"].unique()
-    int_list = [int(x) for x in player_list]
-    int_list.sort()
-    return int_list
+    relevant_subset = df[df["team"] == team]
+    relevant_subset = relevant_subset[relevant_subset["home"] == True]
+    player_list = relevant_subset["player_name"].unique()
+    print("PLAYER LIST:", player_list)
+    #player_list.sort()
+    return player_list
 
 if __name__ == '__main__':
     app.run(debug=False, port=8002)
