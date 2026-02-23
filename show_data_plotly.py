@@ -218,9 +218,9 @@ def draw_shot_distribution_pie_chart(player, team, lower, upper):
     fig.update_layout(title="Shot Distribution", template="plotly_dark")
     return fig
 
-def draw_points_per_position_pie_chart(player, team, lower, upper):
+def draw_points_per_position_bar_chart(player, team, lower, upper):
     """
-        Draw a PPS (points per position) pie chart, to see the players most effective positions 
+        Draw a PPS (points per position) bar chart, to see the players most effective positions 
     """
     player_shot_df = get_specific_player_shots(player_number=player, team=team, lower_bound=lower, upper_bound=upper)
     x_factor = 50 / 14
@@ -246,14 +246,14 @@ def draw_points_per_position_pie_chart(player, team, lower, upper):
             corner[key]["PPS"] = total_points / corner[key]["total_shots"]
 
     pps = {
-        "c3_right": corner["c3_right"]["PPS"],
         "c3_left": corner["c3_left"]["PPS"],
-        "c2_left": corner["c2_right"]["PPS"],
+        "c2_left": corner["c2_left"]["PPS"],
+        "c3_right": corner["c3_right"]["PPS"],
         "c2_right": corner["c2_right"]["PPS"],
-        "w_left_3": (wing["w_left"]["3_make"] * 3) / (wing["w_left"]["3_make"] + wing["w_left"]["3_miss"]) if wing["w_left"]["3_make"] + wing["w_left"]["3_miss"] > 0 else 0,
-        "w_right_3": (wing["w_right"]["3_make"] * 3) / (wing["w_right"]["3_make"] + wing["w_right"]["3_miss"]) if wing["w_right"]["3_make"] + wing["w_right"]["3_miss"] > 0 else 0,
-        "w_left_2": (wing["w_left"]["2_make"] * 2) / (wing["w_left"]["2_make"] + wing["w_left"]["2_miss"]) if wing["w_left"]["2_make"] + wing["w_left"]["2_miss"] > 0 else 0,
-        "w_right_2": (wing["w_right"]["3_make"] * 3) / (wing["w_right"]["3_make"] + wing["w_right"]["3_miss"]) if wing["w_right"]["2_make"] + wing["w_right"]["2_miss"] > 0 else 0,
+        "w_left_3": (wing["w_left"]["3_make"] * 3) / wing["w_left"]["total_3s"] if wing["w_left"]["total_3s"] > 0 else 0,
+        "w_left_2": (wing["w_left"]["2_make"] * 2) / wing["w_left"]["total_2s"] if wing["w_left"]["total_2s"] > 0 else 0,
+        "w_right_3": (wing["w_right"]["3_make"] * 3) / wing["w_right"]["total_3s"] if wing["w_right"]["total_3s"] > 0 else 0,
+        "w_right_2": (wing["w_right"]["2_make"] * 2) / wing["w_right"]["total_2s"] if wing["w_right"]["total_2s"] > 0 else 0,
         "paint_near": (paint["restricted_area_makes"] * 2) / paint["total_restr_shots"] if paint["total_restr_shots"] > 0 else 0,
         "paint_outside": (paint["makes"] * 2) / paint["total_shots"] if paint["total_shots"] > 0  else 0,
         "center_3": (center["3_make"] * 3) / center["total_3s"] if center["total_3s"] > 0 else 0,
