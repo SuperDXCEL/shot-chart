@@ -12,12 +12,15 @@ def get_specific_player_shots(player_number, team, lower_bound, upper_bound):
     """
         Return dataframe with specific player shots
     """
-    df = pd.read_csv("scraping/shots.csv")
-    df = df[df['player_number'] == player_number]
-    df = df[df['team'] == team]
-    df = df[(df['game_index'] >= lower_bound) & (df['game_index'] <= upper_bound)]
-    print(df.head())
-    return df
+    try:
+        df = pd.read_csv("scraping/shots.csv")
+        df = df[df['player_number'] == player_number]
+        df = df[df['team'] == team]
+        df = df[(df['game_index'] >= lower_bound) & (df['game_index'] <= upper_bound)]
+        print(df.head())
+        return df
+    except Exception as e:
+        print("EXCEPTION:", e)
 
 def draw_court(player_number, team, lower_bound, upper_bound):
     """
