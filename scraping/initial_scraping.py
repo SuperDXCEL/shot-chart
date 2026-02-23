@@ -23,14 +23,6 @@ class FEBBot():
     def accept_cookies(self):
         self.driver.find_element(By.XPATH, "//button[contains(@aria-label, 'Aceptar')]").click()
 
-    def get_jornada_range(self):
-        """
-            Ask user for the range of games
-        """
-        i = 0
-        j = 18 
-        return i, j
-
     def get_data(self, index, team_name="EL VENTERO CBV", jersey_number=0):
         """
             Get shot chart for one game for the jersey number
@@ -103,23 +95,33 @@ class FEBBot():
             away_team_parent = self.driver.find_element(By.XPATH, "//div[contains(@class, 'Team1')]")
             away_team = away_team_parent.find_element(By.XPATH, ".//div").text
             shot_list = []
+            home_team_players = [element.text for element in self.driver.find_elements(By.XPATH, "//div[contains(@class, 'player-check-name t0')]")]
+            away_team_players = [element.text for element in self.driver.find_elements(By.XPATH, "//div[contains(@class, 'player-check-name t1')]")]
             for i in range(0, len(home_team_shots)):
                 shot_class = home_team_shots[i].get_attribute("class").split(" ")
                 player_number = int(shot_class[2][2:])
+                player_name = ""
+                for player_text in home_team_players:
+                    if str(player_number) in player_text:
+                        player_name = player_text.split('-', 1)[1]
                 shot_success = bool(int(shot_class[3][-1]))
                 shot_style = home_team_shots[i].get_attribute("style").split(";")
                 left = shot_style[1].split(" ")[2]
                 top = shot_style[0].split(" ")[1]
-                shot = {"team": home_team, "player_number": player_number, "left": left, "top": top, "success": shot_success, "game_index": game_index, "rival": away_team, "home": True}
+                shot = {"team": home_team, "player_number": player_number, "player_name": player_name, "left": left, "top": top, "success": shot_success, "game_index": game_index, "rival": away_team, "home": True}
                 shot_list.append(shot)
             for i in range(0, len(away_team_shots)):
                 shot_class = away_team_shots[i].get_attribute("class").split(" ")
                 player_number = int(shot_class[2][2:])
+                player_name = ""
+                for player_text in home_team_players:
+                    if str(player_number) in player_text:
+                        player_name = player_text[3:]
                 shot_success = bool(int(shot_class[3][-1]))
                 shot_style = away_team_shots[i].get_attribute("style").split(";")
                 left = shot_style[1].split(" ")[2]
                 top = shot_style[0].split(" ")[1]
-                shot = {"team": away_team, "player_number": player_number, "left": left, "top": top, "success": shot_success, "game_index": game_index, "rival": home_team, "home": False}
+                shot = {"team": away_team, "player_number": player_number, "player_name": player_name, "left": left, "top": top, "success": shot_success, "game_index": game_index, "rival": home_team, "home": False}
                 shot_list.append(shot)
             dataframe = pd.DataFrame(shot_list)
             return dataframe
@@ -170,8 +172,7 @@ class FEBBot():
             print("EXCEPTION AT CLICK_GAME_INDEX:", e)
 
     def run(self):
-        #lower_bound, upper_bound = self.get_jornada_range()
-        i = 0
+        i = 1 
         full_df = pd.DataFrame({})
         while i < 20:
             self.click_game_index(i)
@@ -191,6 +192,7 @@ class FEBBot():
             print("MISSED GAMES: ", MISSED_GAMES)
         except Exception as e:
             print("Could not open shots.csv as a dataframe", e)
+            print("Writing to a new file called shots.csv in the current directory...")
             full_df.to_csv("shots.csv", index=False)
 
 d = FEBBot()
