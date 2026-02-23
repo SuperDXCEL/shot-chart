@@ -103,7 +103,7 @@ def show_shot_distribution_pie_chart(player, team, lower, upper):
 def show_points_per_position_pie_chart(player, team, lower, upper):
     player_number = utilities.get_player_number_from_name(player, team, df)
     print("CURRENT PLAYER NUMBER: ", player_number)
-    fig = show_data_plotly.draw_points_per_position_pie_chart(player_number, team, lower, upper)
+    fig = show_data_plotly.draw_points_per_position_bar_chart(player_number, team, lower, upper)
     return fig
 
 # Select players available from team
