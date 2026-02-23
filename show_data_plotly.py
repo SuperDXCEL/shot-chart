@@ -197,6 +197,7 @@ def draw_shot_distribution_pie_chart(player, team, lower, upper):
     paint = find_paint_percentage(np_shot_array)
 
     shot_distribution_percentages = {}
+    #TODO REFACTOR
     if corner and wing and center and paint:
         shot_distribution_percentages = {
             "threes": corner["c3_right"]["make"] + corner["c3_right"]["miss"] + corner["c3_left"]["make"] + corner["c3_left"]["miss"] + wing["w_left"]["3_make"] + wing["w_left"]["3_miss"] + wing["w_right"]["3_make"] + wing["w_right"]["3_miss"] + center["3_make"] + center["3_miss"],
@@ -204,13 +205,62 @@ def draw_shot_distribution_pie_chart(player, team, lower, upper):
             "floaters/close_midrange": paint["total_shots"],
             "layups": paint["total_restr_shots"] 
     }
+    #TODO FINISH REFACTOR
     
     labels = list(shot_distribution_percentages.keys())
     values = list(shot_distribution_percentages.values())
 
     fig = go.Figure(data=[go.Pie(labels=labels, values=values)])
 
-    fig.update_layout(title="Shot Distribution")
+    fig.update_layout(title="Shot Distribution", template="plotly_dark")
+    return fig
+
+def draw_points_per_position_pie_chart(player, team, lower, upper):
+    """
+        Draw a PPS (points per position) pie chart, to see the players most effective positions 
+    """
+    player_shot_df = get_specific_player_shots(player_number=player, team=team, lower_bound=lower, upper_bound=upper)
+    x_factor = 50 / 14
+    y_factor = 100 / 15
+    player_shot_df["left"] = player_shot_df['left'] / x_factor
+    player_shot_df["top"] = player_shot_df['top'] / y_factor
+    fig = px.scatter(player_shot_df, x="left", y="top")
+    np_shot_array = player_shot_df[["left", "top", "success"]].values
+
+    corner = find_corner_percentage(np_shot_array)
+    wing = find_wing_percentage(np_shot_array)
+    center = find_center_percentage(np_shot_array)
+    paint = find_paint_percentage(np_shot_array)
+
+    for key in list(corner.keys()):
+        total_points = 0
+        if "2" in key:
+            total_points = corner[key]["make"] * 2
+        else:
+            total_points = corner[key]["make"] * 3 
+        corner[key]["PPS"] = 0
+        if corner[key]["total_shots"] > 0:
+            corner[key]["PPS"] = total_points / corner[key]["total_shots"]
+
+    pps = {
+        "c3_right": corner["c3_right"]["PPS"],
+        "c3_left": corner["c3_left"]["PPS"],
+        "c2_left": corner["c2_right"]["PPS"],
+        "c2_right": corner["c2_right"]["PPS"],
+        "w_left_3": (wing["w_left"]["3_make"] * 3) / (wing["w_left"]["3_make"] + wing["w_left"]["3_miss"]) if wing["w_left"]["3_make"] + wing["w_left"]["3_miss"] > 0 else 0,
+        "w_right_3": (wing["w_right"]["3_make"] * 3) / (wing["w_right"]["3_make"] + wing["w_right"]["3_miss"]) if wing["w_right"]["3_make"] + wing["w_right"]["3_miss"] > 0 else 0,
+        "w_left_2": (wing["w_left"]["2_make"] * 2) / (wing["w_left"]["2_make"] + wing["w_left"]["2_miss"]) if wing["w_left"]["2_make"] + wing["w_left"]["2_miss"] > 0 else 0,
+        "w_right_2": (wing["w_right"]["3_make"] * 3) / (wing["w_right"]["3_make"] + wing["w_right"]["3_miss"]) if wing["w_right"]["2_make"] + wing["w_right"]["2_miss"] > 0 else 0,
+        "paint_near": (paint["restricted_area_makes"] * 2) / paint["total_restr_shots"] if paint["total_restr_shots"] > 0 else 0,
+        "paint_outside": (paint["makes"] * 2) / paint["total_shots"] if paint["total_shots"] > 0  else 0,
+        "center_3": (center["3_make"] * 3) / center["total_3s"] if center["total_3s"] > 0 else 0,
+        "center_2": (center["2_make"] * 2) / center["total_2s"] if center["total_2s"] > 0 else 0
+    }
+
+    df = pd.DataFrame(list(pps.items()), columns=["zone", "pps"]) 
+    fig = px.bar(df, y="pps", x="zone")#px.bar(labels=list(pps.keys()), values=list(pps.values()))
+    
+    fig.update_layout(title="Points Per Shot Per Position", template="plotly_dark")
     return fig
 
 def shot_in_area(shot):
@@ -222,7 +272,6 @@ def shot_in_area(shot):
 
 def find_corner_percentage(shot_array):
     print("SHOT ARRAY: ", len(shot_array))
-    print("WTF")
     data = {
         "c3_left": {
             "x_range": [0, 2.99],
@@ -230,6 +279,7 @@ def find_corner_percentage(shot_array):
             "make": 0,
             "miss": 0,
             "percentage": 0,
+            "total_shots": 0,
             "color": "gray"
         },
         "c3_right": {
@@ -238,6 +288,7 @@ def find_corner_percentage(shot_array):
             "make": 0,
             "miss": 0,
             "percentage": 0,
+            "total_shots": 0,
             "color": "gray"
         },
         "c2_left": {
@@ -246,6 +297,7 @@ def find_corner_percentage(shot_array):
             "make": 0,
             "miss": 0,
             "percentage": 0,
+            "total_shots": 0,
             "color": "gray"
         },
         "c2_right": {
@@ -254,6 +306,7 @@ def find_corner_percentage(shot_array):
             "make": 0,
             "miss": 0,
             "percentage": 0,
+            "total_shots": 0,
             "color": "gray"
         },
     }
@@ -298,6 +351,8 @@ def find_paint_percentage(shot_array):
         "misses": 0,
         "percentage": 0,
         "restricted_area_percentage": 0,
+        "total_shots": 0,
+        "total_restr_shots": 0,
         "color": "gray"
     }
     for i in range(len(shot_array)):
@@ -399,6 +454,10 @@ def find_center_percentage(shot_array):
         "2_make": 0,
         "3_miss": 0,
         "2_miss": 0,
+        "total_3s": 0,
+        "total_2s": 0,
+        "percentage_3s": 0,
+        "percentage_2s": 0,
         "color": "gray"
     } 
     for i in range(len(shot_array)):

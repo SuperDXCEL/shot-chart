@@ -47,13 +47,16 @@ app.layout = dbc.Container([
     ]),
     dbc.Row([
         dbc.Col([
-            dcc.Graph(id='graph', figure={}, style={"height": "85vh", "width": "90vw"})
-        ], width=20, md=6),
+            dcc.Graph(id='graph', figure={}, style={"height": "85vh", "width": "99vw"})
+        ], width=12, md=6),
     ], className='mt-4'),
     dbc.Row([
         dbc.Col([
-            dcc.Graph(id='shot_distribution_pie_chart', figure={}, style={"height": "85vh", "width": "90vw"})
-        ], width=20, md=6),
+            dcc.Graph(id='shot_distribution_pie_chart', figure={}, style={"height": "85vh", })
+        ], width=6, md=6),
+        dbc.Col([
+            dcc.Graph(id='points_per_position_pie_chart', figure={}, style={"height": "85vh",})
+        ], width=6, md=6),
     ], className='mt-4'),
     ],
     style={
@@ -81,10 +84,21 @@ def plot_data(player, team, lower, upper):
     Input('lower_bound', 'value'),
     Input('upper_bound', 'value')
 )
-def show_pie_chart(player, team, lower, upper):
+def show_shot_distribution_pie_chart(player, team, lower, upper):
     fig = show_data_plotly.draw_shot_distribution_pie_chart(player, team, lower, upper)
     return fig
     
+@app.callback(
+    Output('points_per_position_pie_chart', 'figure'),
+    Input('player_category', 'value'),
+    Input('team_category', 'value'),
+    Input('lower_bound', 'value'),
+    Input('upper_bound', 'value')
+)
+def show_points_per_position_pie_chart(player, team, lower, upper):
+    fig = show_data_plotly.draw_points_per_position_pie_chart(player, team, lower, upper)
+    return fig
+
 # Select players available from team
 @app.callback(
     Output("player_category", 'options'),
