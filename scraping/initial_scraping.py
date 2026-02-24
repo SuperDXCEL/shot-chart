@@ -96,14 +96,19 @@ class FEBBot():
             away_team = away_team_parent.find_element(By.XPATH, ".//div").text
             shot_list = []
             home_team_players = [element.text for element in self.driver.find_elements(By.XPATH, "//div[contains(@class, 'player-check-name t0')]")]
+            home_player_map = {}
+            for player_text in home_team_players:
+                number, name = player_text.split('-', 1)
+                home_player_map[int(number)] = name.strip()
             away_team_players = [element.text for element in self.driver.find_elements(By.XPATH, "//div[contains(@class, 'player-check-name t1')]")]
+            away_player_map = {}
+            for player_text in away_team_players:
+                number, name = player_text.split('-', 1)
+                away_player_map[int(number)] = name.strip()
             for i in range(0, len(home_team_shots)):
                 shot_class = home_team_shots[i].get_attribute("class").split(" ")
                 player_number = int(shot_class[2][2:])
-                player_name = ""
-                for player_text in home_team_players:
-                    if str(player_number) in player_text:
-                        player_name = player_text.split('-', 1)[1]
+                player_name = home_player_map[player_number]
                 shot_success = bool(int(shot_class[3][-1]))
                 shot_style = home_team_shots[i].get_attribute("style").split(";")
                 left = shot_style[1].split(" ")[2]
@@ -113,10 +118,7 @@ class FEBBot():
             for i in range(0, len(away_team_shots)):
                 shot_class = away_team_shots[i].get_attribute("class").split(" ")
                 player_number = int(shot_class[2][2:])
-                player_name = ""
-                for player_text in home_team_players:
-                    if str(player_number) in player_text:
-                        player_name = player_text[3:]
+                player_name = away_player_map[player_number]
                 shot_success = bool(int(shot_class[3][-1]))
                 shot_style = away_team_shots[i].get_attribute("style").split(";")
                 left = shot_style[1].split(" ")[2]
