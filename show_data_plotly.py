@@ -8,21 +8,21 @@ import plotly.graph_objects as go
 import numpy as np
 import math
 
-def get_specific_player_shots(player_number, team, lower_bound, upper_bound):
+def get_specific_player_shots(player_number, team, currentGroupName, currentLeagueName):
     """
         Return dataframe with specific player shots
     """
     try:
-        df = pd.read_csv("scraping/shots.csv")
+        df = pd.read_csv(f"scraping/{currentLeagueName}_shots.csv")
         df = df[df['player_number'] == player_number]
+        df = df[df['group'] == currentGroupName]
         df = df[df['team'] == team]
-        df = df[(df['game_index'] >= lower_bound) & (df['game_index'] <= upper_bound)]
         print(df.head())
         return df
     except Exception as e:
         print("EXCEPTION:", e)
 
-def draw_court(player_number, team, lower_bound, upper_bound):
+def draw_court(player_number, team, currentGroupName, currentLeagueName):
     """
         Draw the court, and draw the points, between certain boundaries make hot zones
     """
@@ -36,7 +36,7 @@ def draw_court(player_number, team, lower_bound, upper_bound):
     center_for_arc = (rim_from_baseline, 7.5) # Draw arc from here for 6.75 - 1.575
 
     # Plot player's shot
-    player_shot_df = get_specific_player_shots(player_number=player_number, team=team, lower_bound=lower_bound, upper_bound=upper_bound)
+    player_shot_df = get_specific_player_shots(player_number=player_number, team=team, currentGroupName=currentGroupName, currentLeagueName=currentLeagueName)
     x_factor = 50 / court_width
     y_factor = 100 / court_height
     player_shot_df["left"] = player_shot_df['left'] / x_factor
@@ -182,11 +182,11 @@ def draw_hotzone_spots(fig, corner=None, wing=None, center=None, paint=None):
 
     return corner, wing, center, paint
 
-def draw_shot_distribution_pie_chart(player, team, lower, upper):
+def draw_shot_distribution_pie_chart(player, team, currentGroupName, currentLeagueName):
     """
         Draw distribution pie chart of shot attempts by distance, 3s, 2s, floaters, layups.
     """
-    player_shot_df = get_specific_player_shots(player_number=player, team=team, lower_bound=lower, upper_bound=upper)
+    player_shot_df = get_specific_player_shots(player_number=player, team=team, currentGroupName=currentGroupName, currentLeagueName=currentLeagueName)
     x_factor = 50 / 14
     y_factor = 100 / 15
     player_shot_df["left"] = player_shot_df['left'] / x_factor
@@ -218,11 +218,11 @@ def draw_shot_distribution_pie_chart(player, team, lower, upper):
     fig.update_layout(title="Shot Distribution", template="plotly_dark")
     return fig
 
-def draw_points_per_position_bar_chart(player, team, lower, upper):
+def draw_points_per_position_bar_chart(player, team, currentGroupName, currentLeagueName):
     """
         Draw a PPS (points per position) bar chart, to see the players most effective positions 
     """
-    player_shot_df = get_specific_player_shots(player_number=player, team=team, lower_bound=lower, upper_bound=upper)
+    player_shot_df = get_specific_player_shots(player_number=player, team=team, currentGroupName=currentGroupName, currentLeagueName=currentLeagueName)
     x_factor = 50 / 14
     y_factor = 100 / 15
     player_shot_df["left"] = player_shot_df['left'] / x_factor

@@ -4,22 +4,42 @@ import pandas as pd     # pip install pandas
 import show_data_plotly
 import utilities
 
-df = pd.read_csv("scraping/shots.csv")
+df = pd.read_csv("scraping/LF ENDESA_shots.csv")
 
-TEAM_VALUES = df['team'].unique()
-MIN = df["game_index"].min()
-MAX = df["game_index"].max()
+LEAGUE_VALUES = ["LF ENDESA", "PRIMERA FEB", "LF CHALLENGE", "SEGUNDA FEB", "L.F.-2", "TERCERA FEB", "LIGA U", "COPA ESPAÑA"]
+TEAM_VALUES = None
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container([
-    html.H1("SHOT CHART TERCERA FEB GRUPO B-A 2025-26", style={'textAlign':'center', "color": "white", "fontFamily": "Helvetica", "fontWeight": "bold"}),
+dbc.Row([
+    dbc.Col(html.Img(src="assets/feb_logo.png", style={"height": "60px", "width": "auto"}), width="auto"),
+    dbc.Col(html.H1("SHOT CHART FEB", style={"color": "white", "fontFamily": "Helvetica", "fontWeight": "bold"}), align="center"),
+], className="mb-3", align="center", style={
+    "padding": "2vh 2vw",
+}),
     dbc.Row([
+        dbc.Col([
+            dcc.Dropdown(
+                id="league_category",
+                value="LF ENDESA",
+                clearable=False,
+                options=LEAGUE_VALUES,
+                placeholder='SELECT LEAGUE'
+            )
+        ], width=2),
+        dbc.Col([
+            dcc.Dropdown(
+                id="group_category",
+                value="group",
+                clearable=False,
+                placeholder='SELECT GROUP'
+            )
+        ], width=2),
         dbc.Col([
             dcc.Dropdown(
                 id='team_category',
                 value="team",
-                clearable=False,
-                options=TEAM_VALUES,
+                clearable=True,
                 placeholder='SELECT TEAM')
         ], width=2),
         dbc.Col([
@@ -29,22 +49,6 @@ app.layout = dbc.Container([
                 clearable=True,
                 placeholder='SELECT PLAYER')
         ], width=2),
-        dbc.Col([
-            dcc.Dropdown(
-                id='lower_bound',
-                value="index",
-                clearable=False,
-                options=list(range(MIN, MAX+1)),
-                placeholder="SELECT FIRST GAME")
-        ], width=2),
-        dbc.Col([
-            dcc.Dropdown(
-                id='upper_bound',
-                value="index",
-                clearable=False,
-                options=list(range(MIN, MAX+1)),
-                placeholder="SELECT LAST GAME")
-        ], width=2)
     ]),
     dbc.Row([
         dbc.Col([
@@ -66,57 +70,79 @@ app.layout = dbc.Container([
         "minWidth": "100vw",
     })
 
+
 # Create interactivity between dropdown component and graph
 @app.callback(
     Output('graph', 'figure'),
-    Input('player_category', 'value'),
+    Input('league_category', 'value'),
+    Input('group_category', 'value'),
     Input('team_category', 'value'),
-    Input('lower_bound', 'value'),
-    Input('upper_bound', 'value')
+    Input('player_category', 'value'),
 )
-def plot_data(player, team, lower, upper):
-    player_number = utilities.get_player_number_from_name(player, team, df)
+def plot_data(league, group, team, player):
+    player_number = utilities.get_player_number_from_name(player, team, group, df)
     print("CURRENT PLAYER NUMBER: ", player_number)
-    fig = show_data_plotly.draw_court(player_number, team, lower, upper)
+    fig = show_data_plotly.draw_court(player_number, team, group, league)
     return fig
 
 @app.callback(
     Output('shot_distribution_pie_chart', 'figure'),
-    Input('player_category', 'value'),
+    Input('league_category', 'value'),
+    Input('group_category', 'value'),
     Input('team_category', 'value'),
-    Input('lower_bound', 'value'),
-    Input('upper_bound', 'value')
+    Input('player_category', 'value'),
 )
-def show_shot_distribution_pie_chart(player, team, lower, upper):
-    player_number = utilities.get_player_number_from_name(player, team, df)
+def show_shot_distribution_pie_chart(league, group, team, player):
+    player_number = utilities.get_player_number_from_name(player, team, group, df)
     print("CURRENT PLAYER NUMBER: ", player_number)
-    fig = show_data_plotly.draw_shot_distribution_pie_chart(player_number, team, lower, upper)
+    fig = show_data_plotly.draw_shot_distribution_pie_chart(player_number, team, group, currentLeagueName=league)
     return fig
     
 @app.callback(
     Output('points_per_position_pie_chart', 'figure'),
-    Input('player_category', 'value'),
+    Input('league_category', 'value'),
+    Input('group_category', 'value'),
     Input('team_category', 'value'),
-    Input('lower_bound', 'value'),
-    Input('upper_bound', 'value')
+    Input('player_category', 'value'),
 )
-def show_points_per_position_pie_chart(player, team, lower, upper):
-    player_number = utilities.get_player_number_from_name(player, team, df)
+def show_points_per_position_pie_chart(league, group, team, player):
+    player_number = utilities.get_player_number_from_name(player, team, group, df)
     print("CURRENT PLAYER NUMBER: ", player_number)
-    fig = show_data_plotly.draw_points_per_position_bar_chart(player_number, team, lower, upper)
+    fig = show_data_plotly.draw_points_per_position_bar_chart(player_number, team, group, currentLeagueName=league)
     return fig
+
+# Select available groups
+@app.callback(
+    Output("group_category", "options"),
+    Input("league_category", "value")
+)
+def select_groups(league):
+    global df
+    df = pd.read_csv(f"scraping/{league}_shots.csv")
+    return df["group"].unique()
+
+# Select available teams
+@app.callback(
+    Output("team_category", "options"),
+    Input("group_category", "value")
+)
+def select_teams(group):
+    relevant_subset = df[df["group"] == group]
+    team_list = relevant_subset["team"].unique()
+    return team_list
 
 # Select players available from team
 @app.callback(
     Output("player_category", 'options'),
+    Input('group_category', 'value'),
     Input("team_category", 'value')
 )
-def select_players(team):
-    relevant_subset = df[df["team"] == team]
+def select_players(group, team):
+    relevant_subset = df[df["group"] == group]
+    relevant_subset = relevant_subset[relevant_subset["team"] == team]
     relevant_subset = relevant_subset[relevant_subset["home"] == True]
     player_list = relevant_subset["player_name"].unique()
     print("PLAYER LIST:", player_list)
-    #player_list.sort()
     return player_list
 
 if __name__ == '__main__':

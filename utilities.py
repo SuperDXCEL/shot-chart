@@ -2,12 +2,13 @@
     Utilities module
 """
 
-def get_player_number_from_name(player, team, df):
+def get_player_number_from_name(player, team, group, df):
     """
         Self-explanatory
     """
     try:
-        subset = df[df["player_name"] == player] 
+        subset = df[df["player_name"] == player]
+        subset = subset[subset["group"] == group] 
         player_number = subset[subset["team"] == team]["player_number"]
         # Get the most common number
         player_number = player_number.mode()

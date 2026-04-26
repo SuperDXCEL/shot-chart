@@ -6,19 +6,22 @@ from selenium.common.exceptions import NoSuchElementException, ElementClickInter
 import undetected_chromedriver as uc
 import time
 import pandas as pd
+import re
+from concurrent.futures import ThreadPoolExecutor
 
 MISSED_GAMES = 0
 
 class FEBBot():
     def __init__(self):
         options = uc.ChromeOptions()
-        options.add_argument('--headless')
+        #options.add_argument('--headless')
         #options.add_argument('--user-data-dir="/home/nodev/snap/chromium/common/chromium/Default"')
         #options.add_argument('--profile-directory=Profile 1')
         self.driver = uc.Chrome(
                 options=options,
                 version_main=144
         )
+        self.driver.get("https://baloncestoenvivo.feb.es")
 
     def accept_cookies(self):
         self.driver.find_element(By.XPATH, "//button[contains(@aria-label, 'Aceptar')]").click()
@@ -76,7 +79,7 @@ class FEBBot():
                 break
         return player_div
 
-    def get_data_from_game(self, game_index):
+    def get_data_from_game(self, game_index, currentLeagueName, currentGroupName):
         """
             Change approach, instead of singular players we will
             go into each game, find out who the home team is and
@@ -113,7 +116,7 @@ class FEBBot():
                 shot_style = home_team_shots[i].get_attribute("style").split(";")
                 left = shot_style[1].split(" ")[2]
                 top = shot_style[0].split(" ")[1]
-                shot = {"team": home_team, "player_number": player_number, "player_name": player_name, "left": left, "top": top, "success": shot_success, "game_index": game_index, "rival": away_team, "home": True}
+                shot = {"league": currentLeagueName, "group": currentGroupName, "team": home_team, "player_number": player_number, "player_name": player_name, "left": left, "top": top, "success": shot_success, "game_index": game_index, "rival": away_team, "home": True}
                 shot_list.append(shot)
             for i in range(0, len(away_team_shots)):
                 shot_class = away_team_shots[i].get_attribute("class").split(" ")
@@ -123,7 +126,7 @@ class FEBBot():
                 shot_style = away_team_shots[i].get_attribute("style").split(";")
                 left = shot_style[1].split(" ")[2]
                 top = shot_style[0].split(" ")[1]
-                shot = {"team": away_team, "player_number": player_number, "player_name": player_name, "left": left, "top": top, "success": shot_success, "game_index": game_index, "rival": home_team, "home": False}
+                shot = {"league": currentLeagueName, "group": currentGroupName, "team": away_team, "player_number": player_number, "player_name": player_name, "left": left, "top": top, "success": shot_success, "game_index": game_index, "rival": home_team, "home": False}
                 shot_list.append(shot)
             dataframe = pd.DataFrame(shot_list)
             return dataframe
@@ -139,10 +142,11 @@ class FEBBot():
         )
         grafico_de_tiro_link.click()
 
-    def get_games(self, game_index):
+    def get_games(self, game_index, currentLeagueName, currentGroupName):
         """
             When the game index is chosen and clicked we call this function
         """
+        print("AT GET_GAMES: ", currentLeagueName, currentGroupName)
         game_links = self.driver.find_elements(By.XPATH, "//a[contains(@id, 'resultado')]")
         full_df = pd.DataFrame({})
         for i in range(0, len(game_links)):
@@ -154,7 +158,7 @@ class FEBBot():
                 self.driver.execute_script("arguments[0].scrollIntoView(true)", game_links[i])
                 game_links[i].click()
                 self.get_to_graphical_chart()
-                df = self.get_data_from_game(game_index)
+                df = self.get_data_from_game(game_index, currentLeagueName, currentGroupName)
                 full_df = pd.concat([full_df, df])
                 print(df.head())
                 self.driver.back()
@@ -164,6 +168,8 @@ class FEBBot():
 
     def click_game_index(self, index):
         """
+            Accepts an integer representing the game index as a parameter and
+            clicks it in the FEB page.
         """
         try:
             current_game_index_button = WebDriverWait(self.driver, 10).until(
@@ -173,34 +179,87 @@ class FEBBot():
         except Exception as e:
             print("EXCEPTION AT CLICK_GAME_INDEX:", e)
 
-    def run(self):
-        i = 1 
-        full_df = pd.DataFrame({})
-        while i < 20:
-            self.click_game_index(i)
-            df = self.get_games(i)
-            full_df = pd.concat([full_df, df])
-            i += 1
+    def get_league_name_and_link(self):
+        """
+            Return list of dictionaries of all the FEB relevant leagues, containing the league name
+            and the link to the results page of said league
+        """
+        league_name_elements = self.driver.find_elements(By.XPATH, f"//span[contains(@class, 'liga')]")
+        relevant_league_elements = []
+        for r in league_name_elements:
+            if r.text in ("LF ENDESA", "PRIMERA FEB", "LF CHALLENGE", "SEGUNDA FEB", "L.F.-2", "TERCERA FEB", "LIGA U", "COPA ESPAÑA"):
+                relevant_league_elements.append(r)
+
+        league_name_results_link = []
+        for el in relevant_league_elements:
+            parent = el.find_element(By.XPATH, "..")
+            results_link = parent.find_element(By.XPATH, ".//a[text() = 'Resultados']")
+            league_name_results_link.append({"league_name": el.text, "link": results_link.get_attribute("href")})
+
+        return league_name_results_link
+
+    def select_groups(self):
+        """
+            Return the group link elements of the current league
+        """
+        select_tag_elements = self.driver.find_elements(By.XPATH, "//select")
+        # GROUPS
+        group_options = select_tag_elements[1].find_elements(By.XPATH, ".//option")
+        return group_options
+    
+    def run(self, currentLeagueName, partial = False):
+        league_groups = self.select_groups()
+        for i in range(len(league_groups)):
+            group = self.select_groups()[i]
+            # Select group
+            currentGroupName = group.text
+            group.click()
+            # Select last game index
+            last_game_index_string = self.driver.find_element(By.XPATH, "//option[contains(text(), 'Jornada') and @selected = 'selected']").text
+            last_game_index = re.search("[0-9][0-9]?", last_game_index_string)
+            last_game_index = int(last_game_index.group(0))
+            first_game_index = 1 
+            if partial:
+                first_game_index = last_game_index
+            full_df = pd.DataFrame({})
+            #while first_game_index <= last_game_index:
+            #TEST
+            while first_game_index <= last_game_index:
+                self.click_game_index(first_game_index)
+                df = self.get_games(first_game_index, currentLeagueName, currentGroupName)
+                full_df = pd.concat([full_df, df])
+                first_game_index += 1
         df = None
         try:
-            df = pd.read_csv("shots.csv")
+            df = pd.read_csv(f"{currentLeagueName}_shots.csv")
             print("Length of rows before concatenating: ", len(full_df))
             full_df = pd.concat([df, full_df])
             print("Length of rows after concatenating (with possible duplicates): ", len(full_df))
-            full_df.drop_duplicates()
+            full_df = full_df.drop_duplicates()
             print("Length of rows after concatenating: ", len(full_df))
             global MISSED_GAMES
             full_df.to_csv("shots.csv")
             print("MISSED GAMES: ", MISSED_GAMES)
         except Exception as e:
             print("Could not open shots.csv as a dataframe", e)
-            print("Writing to a new file called shots.csv in the current directory...")
-            full_df.to_csv("shots.csv", index=False)
+            print(f"Writing to a new file called {currentLeagueName}_shots.csv in the current directory...")
+            full_df.to_csv(f"{currentLeagueName}_shots.csv", index=False)
 
-d = FEBBot()
-d.driver.get("https://baloncestoenvivo.feb.es/resultados/tercerafeb/3/2025")
-group_element = d.driver.find_element(By.XPATH, "//select[contains(@id, 'grupos')]")
-group_element.click()
-group_element.find_element(By.XPATH, "//option[contains(text(), 'B-A')]").click()
-time.sleep(1.5)
-d.run()
+def scrape_league(pair):
+    bot = FEBBot()
+    bot.driver.get(pair["link"])
+    bot.run(pair["league_name"])
+    bot.driver.quit()
+
+bot = FEBBot()
+league_name_and_link_dict = bot.get_league_name_and_link()
+bot.driver.quit()
+
+with ThreadPoolExecutor(max_workers=4) as executor:
+    executor.map(scrape_league, league_name_and_link_dict)
+
+# group_element = d.driver.find_element(By.XPATH, "//select[contains(@id, 'grupos')]")
+# group_element.click()
+# group_element.find_element(By.XPATH, "//option[contains(text(), 'B-A')]").click()
+# time.sleep(1.5)
+# d.run()
