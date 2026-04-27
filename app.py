@@ -6,7 +6,7 @@ import utilities
 
 df = pd.read_csv("scraping/LF ENDESA_shots.csv")
 
-LEAGUE_VALUES = ["LF ENDESA", "PRIMERA FEB", "LF CHALLENGE", "SEGUNDA FEB", "L.F.-2", "TERCERA FEB", "LIGA U", "COPA ESPAÑA"]
+LEAGUE_VALUES = ["LF ENDESA", "PRIMERA FEB", "SEGUNDA FEB", "TERCERA FEB", "LIGA U", "COPA ESPAÑA"]
 TEAM_VALUES = None
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
