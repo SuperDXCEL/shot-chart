@@ -2,12 +2,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from selenium.common.exceptions import StaleElementReferenceException
 import undetected_chromedriver as uc
 import time
 import pandas as pd
 import re
-from concurrent.futures import ThreadPoolExecutor
 
 MISSED_GAMES = 0
 
@@ -21,7 +20,6 @@ class FEBBot():
                 options=options,
                 version_main=144
         )
-        self.driver.get("https://baloncestoenvivo.feb.es")
 
     def accept_cookies(self):
         self.driver.find_element(By.XPATH, "//button[contains(@aria-label, 'Aceptar')]").click()
@@ -194,7 +192,7 @@ class FEBBot():
         for el in relevant_league_elements:
             parent = el.find_element(By.XPATH, "..")
             results_link = parent.find_element(By.XPATH, ".//a[text() = 'Resultados']")
-            league_name_results_link.append({"league_name": el.text, "link": results_link.get_attribute("href")})
+            league_name_results_link.append({"league_name": el.text, "link": results_link})
 
         return league_name_results_link
 
@@ -204,13 +202,24 @@ class FEBBot():
         """
         select_tag_elements = self.driver.find_elements(By.XPATH, "//select")
         # GROUPS
-        group_options = select_tag_elements[1].find_elements(By.XPATH, ".//option")
-        return group_options
+        try:
+            group_options = select_tag_elements[1].find_elements(By.XPATH, ".//option")
+            return group_options
+        except IndexError as e:
+            print(e)
+            print("Solving...")
+            self.driver.back()
+            return []
     
     def run(self, currentLeagueName, partial = False):
         league_groups = self.select_groups()
+        full_df = pd.DataFrame({})
+        group = None
         for i in range(len(league_groups)):
-            group = self.select_groups()[i]
+            try:
+                group = self.select_groups()[i]
+            except IndexError as e:
+                continue
             # Select group
             currentGroupName = group.text
             group.click()
@@ -221,10 +230,9 @@ class FEBBot():
             first_game_index = 1 
             if partial:
                 first_game_index = last_game_index
-            full_df = pd.DataFrame({})
-            #while first_game_index <= last_game_index:
-            #TEST
             while first_game_index <= last_game_index:
+            #TEST
+            #while first_game_index <= 1:
                 self.click_game_index(first_game_index)
                 df = self.get_games(first_game_index, currentLeagueName, currentGroupName)
                 full_df = pd.concat([full_df, df])
@@ -238,25 +246,23 @@ class FEBBot():
             full_df = full_df.drop_duplicates()
             print("Length of rows after concatenating: ", len(full_df))
             global MISSED_GAMES
-            full_df.to_csv("shots.csv")
+            full_df.to_csv(f"{currentLeagueName}_shots.csv")
             print("MISSED GAMES: ", MISSED_GAMES)
         except Exception as e:
             print("Could not open shots.csv as a dataframe", e)
             print(f"Writing to a new file called {currentLeagueName}_shots.csv in the current directory...")
             full_df.to_csv(f"{currentLeagueName}_shots.csv", index=False)
 
-def scrape_league(pair):
-    bot = FEBBot()
-    bot.driver.get(pair["link"])
-    bot.run(pair["league_name"])
-    bot.driver.quit()
-
 bot = FEBBot()
+bot.driver.get("https://baloncestoenvivo.feb.es")
 league_name_and_link_dict = bot.get_league_name_and_link()
-bot.driver.quit()
-
-with ThreadPoolExecutor(max_workers=4) as executor:
-    executor.map(scrape_league, league_name_and_link_dict)
+for i in range(len(league_name_and_link_dict)):
+    if i == 2 or i == 4:
+        continue
+    pair = bot.get_league_name_and_link()[i]
+    pair["link"].click()
+    bot.run(pair["league_name"])
+    bot.driver.get("https://baloncestoenvivo.feb.es")
 
 # group_element = d.driver.find_element(By.XPATH, "//select[contains(@id, 'grupos')]")
 # group_element.click()
