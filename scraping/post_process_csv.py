@@ -2,17 +2,17 @@ import pandas as pd
 
 LEAGUES = ["LF ENDESA", "PRIMERA FEB", "LF CHALLENGE", "SEGUNDA FEB", "L.F.-2", "TERCERA FEB", "LIGA U", "COPA ESPAÑA"]
 
-def flip_shot(left, top, col):
+def flip_shot(row):
     """
         If left value is > 50, left = 100 - left and top = 100 - top
     """
+    left = row["left"]
+    top = row["top"]
     if left > 50:
         left = 100 - left
         top = 100 - top
-    if col == "left":
-        return left
-    else:
-        return top
+
+    return pd.Series({"left": left, "top": top})
 
 def modify_dataframe():
     """
@@ -28,8 +28,7 @@ def modify_dataframe():
         try:
             df["left"] = df["left"].str[:-1].astype(float)
             df["top"] = df["top"].str[:-1].astype(float)
-            df["left"] = df.apply(lambda x: flip_shot(x["left"], x["top"], "left"), axis=1)
-            df["top"] = df.apply(lambda x: flip_shot(x["left"], x["top"], "top"), axis=1)
+            df[["left","top"]] = df.apply(flip_shot, axis=1)
             df["game_index"] = df["game_index"].astype(int)
             df.to_csv(f"{league}_shots.csv", index=False)
         except AttributeError as e:
