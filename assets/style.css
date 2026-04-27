@@ -2,3 +2,11 @@ html, body {
     background-color: black;
     margin: 0;
 }
+
+@media only screen and (max-width: 920px) {
+     .dash-graph {
+        width: 100% !important;
+        height: 65% !important;
+        position: absolute !important;
+    }
+}
