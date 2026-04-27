@@ -14,6 +14,8 @@ app.layout = dbc.Container([
 dbc.Row([
     dbc.Col(html.Img(src="assets/feb_logo.png", style={"height": "60px", "width": "auto"}), width="auto"),
     dbc.Col(html.H1("SHOT CHART FEB", style={"color": "white", "fontFamily": "Helvetica", "fontWeight": "bold"}), align="center"),
+    dbc.Col(html.P("Escoge una liga, un grupo, un equipo y un jugador para ver el porcentaje por posición, la distribución de tiro y los puntos por tiro por posición.",
+                   style={"color": "white", "padding": "10px"}))
 ], className="mb-3", align="center", style={
     "padding": "2vh 2vw",
 }),
